@@ -227,14 +227,30 @@ if 'flight' in st.session_state:
     st.header("📈 Flight Trajectory")
 
     # Create trajectory dataframe
+    # Convert to numpy arrays first, then to lists to ensure JSON serialization works
+    import numpy as np
+
+    # Extract data - handle both arrays and Function objects
+    time_data = np.array(flight.time).flatten() if hasattr(flight.time, '__iter__') else np.array([flight.time])
+    alt_data = np.array(flight.z).flatten() if hasattr(flight.z, '__iter__') else np.array([flight.z])
+    vel_data = np.array(flight.speed).flatten() if hasattr(flight.speed, '__iter__') else np.array([flight.speed])
+    accel_data = np.array(flight.acceleration).flatten() if hasattr(flight.acceleration, '__iter__') else np.array([flight.acceleration])
+    x_data = np.array(flight.x).flatten() if hasattr(flight.x, '__iter__') else np.array([flight.x])
+    y_data = np.array(flight.y).flatten() if hasattr(flight.y, '__iter__') else np.array([flight.y])
+
     trajectory_df = pd.DataFrame({
-        'Time (s)': flight.time,
-        'Altitude (m)': flight.z,
-        'Velocity (m/s)': flight.speed,
-        'Acceleration (m/s²)': flight.acceleration,
-        'X Position (m)': flight.x,
-        'Y Position (m)': flight.y
+        'Time (s)': time_data.tolist(),
+        'Altitude (m)': alt_data.tolist(),
+        'Velocity (m/s)': vel_data.tolist(),
+        'Acceleration (m/s²)': accel_data.tolist(),
+        'X Position (m)': x_data.tolist(),
+        'Y Position (m)': y_data.tolist()
     })
+
+    # Debug info
+    st.caption(f"Trajectory data: {len(trajectory_df)} points | "
+               f"Time range: {trajectory_df['Time (s)'].min():.1f} - {trajectory_df['Time (s)'].max():.1f} s | "
+               f"Max altitude: {trajectory_df['Altitude (m)'].max():.1f} m")
 
     # Altitude vs Time
     tab1, tab2, tab3, tab4 = st.tabs(["Altitude", "Velocity", "Ground Track", "Data"])
@@ -251,8 +267,8 @@ if 'flight' in st.session_state:
 
         # Mark apogee
         fig_alt.add_trace(go.Scatter(
-            x=[flight.apogee_time],
-            y=[flight.apogee],
+            x=[float(flight.apogee_time)],
+            y=[float(flight.apogee)],
             mode='markers',
             name='Apogee',
             marker=dict(size=12, color='red', symbol='star')
@@ -278,14 +294,20 @@ if 'flight' in st.session_state:
         ))
 
         # Mark max velocity
-        max_vel_time = trajectory_df.loc[trajectory_df['Velocity (m/s)'].idxmax(), 'Time (s)']
-        fig_vel.add_trace(go.Scatter(
-            x=[max_vel_time],
-            y=[flight.max_speed],
-            mode='markers',
-            name='Max Velocity',
-            marker=dict(size=12, color='red', symbol='star')
-        ))
+        try:
+            max_vel_idx = trajectory_df['Velocity (m/s)'].values.argmax()
+            max_vel_time = float(trajectory_df.iloc[max_vel_idx]['Time (s)'])
+            max_vel_value = float(trajectory_df.iloc[max_vel_idx]['Velocity (m/s)'])
+
+            fig_vel.add_trace(go.Scatter(
+                x=[max_vel_time],
+                y=[max_vel_value],
+                mode='markers',
+                name='Max Velocity',
+                marker=dict(size=12, color='red', symbol='star')
+            ))
+        except Exception as e:
+            st.warning(f"Could not mark max velocity: {e}")
 
         fig_vel.update_layout(
             title="Velocity vs Time",
@@ -323,8 +345,8 @@ if 'flight' in st.session_state:
         ))
 
         fig_ground.add_trace(go.Scatter(
-            x=[flight.x_impact],
-            y=[flight.y_impact],
+            x=[float(flight.x_impact)],
+            y=[float(flight.y_impact)],
             mode='markers',
             name='Landing',
             marker=dict(size=15, color='red', symbol='x')
