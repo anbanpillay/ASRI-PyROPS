@@ -14,6 +14,8 @@ import plotly.express as px
 from datetime import datetime
 
 from rocketpy import Environment, GenericMotor, Rocket, Flight
+import folium
+from streamlit_folium import st_folium
 
 # Page configuration
 st.set_page_config(
@@ -272,7 +274,7 @@ if 'flight' in st.session_state:
                f"Max altitude: {trajectory_df['Altitude (m)'].max():.1f} m")
 
     # Altitude vs Time
-    tab1, tab2, tab3, tab4 = st.tabs(["Altitude", "Velocity", "Ground Track", "Data"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Altitude", "Velocity", "Ground Track", "🗺️ Map View", "Data"])
 
     with tab1:
         fig_alt = go.Figure()
@@ -382,6 +384,96 @@ if 'flight' in st.session_state:
         st.plotly_chart(fig_ground, use_container_width=True)
 
     with tab4:
+        st.subheader("🗺️ Satellite Map View")
+
+        # Convert local X,Y to lat/lon
+        # X is East in meters, Y is North in meters
+        # Approximate conversion (1 degree lat ≈ 111km, lon varies by latitude)
+        lat_start = latitude
+        lon_start = longitude
+
+        # Convert meters to degrees (rough approximation)
+        lat_per_meter = 1 / 111000  # 1 degree lat ≈ 111km
+        lon_per_meter = 1 / (111000 * np.cos(np.radians(latitude)))  # Adjusted for latitude
+
+        lat_landing = lat_start + (float(flight.y_impact) * lat_per_meter)
+        lon_landing = lon_start + (float(flight.x_impact) * lon_per_meter)
+
+        # Create map centered between launch and landing
+        center_lat = (lat_start + lat_landing) / 2
+        center_lon = (lon_start + lon_landing) / 2
+
+        # Calculate zoom level based on distance
+        distance_m = np.sqrt(flight.x_impact**2 + flight.y_impact**2)
+        if distance_m < 1000:
+            zoom_level = 14
+        elif distance_m < 5000:
+            zoom_level = 12
+        elif distance_m < 20000:
+            zoom_level = 10
+        else:
+            zoom_level = 9
+
+        # Create folium map with satellite imagery
+        m = folium.Map(
+            location=[center_lat, center_lon],
+            zoom_start=zoom_level,
+            tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            attr='Esri World Imagery'
+        )
+
+        # Add launch site marker
+        folium.Marker(
+            [lat_start, lon_start],
+            popup=f"🚀 Launch Site<br>Lat: {lat_start:.6f}°<br>Lon: {lon_start:.6f}°<br>Elev: {elevation_m}m",
+            tooltip="Launch Site",
+            icon=folium.Icon(color='green', icon='rocket', prefix='fa')
+        ).add_to(m)
+
+        # Add landing site marker
+        folium.Marker(
+            [lat_landing, lon_landing],
+            popup=f"🪂 Landing Site<br>Lat: {lat_landing:.6f}°<br>Lon: {lon_landing:.6f}°<br>Distance: {distance_m:.0f}m<br>Impact: {flight.impact_velocity:.1f} m/s",
+            tooltip="Landing Site",
+            icon=folium.Icon(color='red', icon='parachute', prefix='fa')
+        ).add_to(m)
+
+        # Draw trajectory line
+        folium.PolyLine(
+            [[lat_start, lon_start], [lat_landing, lon_landing]],
+            color='blue',
+            weight=3,
+            opacity=0.7,
+            popup=f"Flight Path<br>Distance: {distance_m:.0f}m<br>Bearing: {np.degrees(np.arctan2(flight.x_impact, flight.y_impact)) % 360:.1f}°"
+        ).add_to(m)
+
+        # Add circle showing apogee projection (straight up)
+        folium.Circle(
+            [lat_start, lon_start],
+            radius=50,  # 50m radius
+            color='orange',
+            fill=True,
+            fillColor='orange',
+            fillOpacity=0.3,
+            popup=f"Apogee<br>Altitude: {flight.apogee:.0f}m<br>Time: {flight.apogee_time:.1f}s",
+            tooltip="Apogee (directly above launch)"
+        ).add_to(m)
+
+        # Display the map
+        st_folium(m, width=700, height=500)
+
+        # Add location info
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Launch Location", f"{lat_start:.6f}°, {lon_start:.6f}°")
+        with col2:
+            st.metric("Landing Location", f"{lat_landing:.6f}°, {lon_landing:.6f}°")
+        with col3:
+            st.metric("Ground Distance", f"{distance_m:.0f} m")
+
+        st.info(f"💡 **Tip**: The map shows satellite imagery. Green marker = launch, Red marker = landing, Blue line = trajectory projection, Orange circle = apogee location (directly above launch).")
+
+    with tab5:
         st.subheader("Trajectory Data")
         st.dataframe(trajectory_df, use_container_width=True, height=400)
 
