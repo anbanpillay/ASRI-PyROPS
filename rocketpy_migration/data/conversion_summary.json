@@ -1,0 +1,67 @@
+{
+  "conversion_date": "2025-10-19",
+  "source": "BM-001 PyROPS benchmark data",
+  "motor": {
+    "type": "hybrid",
+    "thrust_curve_file": "motors/hybrid_thrust_curve.csv",
+    "burn_time_s": 12.8,
+    "peak_thrust_N": 6038.57546,
+    "total_impulse_Ns": 51475.061181979,
+    "propellant_mass_kg": 28.08422000000001
+  },
+  "aerodynamics": {
+    "source": "RASAero II",
+    "file": "aerodynamics/rasaero_data.csv",
+    "mach_range": [
+      0.01,
+      5.0
+    ],
+    "alpha_range_deg": [
+      0.0,
+      4.0
+    ],
+    "reference_area_m2": 0.0238
+  },
+  "atmosphere": {
+    "file": "environment/atmosphere.csv",
+    "altitude_range_m": [
+      0.0,
+      84000.0
+    ],
+    "surface_pressure_Pa": 101325.0,
+    "surface_temperature_K": 288.16
+  },
+  "wind": {
+    "file": "environment/wind_profile.csv",
+    "surface_speed_ms": 8.0,
+    "surface_bearing_deg": -20.0
+  },
+  "mass_properties": {
+    "file": "mass_properties/time_varying_mass.csv",
+    "dry_mass_kg": 37.811851,
+    "wet_mass_kg": 65.896071,
+    "dry_com_m": 0.0,
+    "dry_MOI": {
+      "Ixx": 0.196,
+      "Iyy": 218.988,
+      "Izz": 218.988
+    }
+  },
+  "rocket_geometry": {
+    "body_radius_m": 0.087,
+    "body_length_m": 4.92,
+    "nose_length_m": null,
+    "fins": {
+      "number": 4,
+      "cant_angle_deg": 0
+    }
+  },
+  "launch_conditions": {
+    "rail_length_m": 7.0,
+    "elevation_deg": 80.0,
+    "azimuth_deg": -100.0,
+    "latitude_deg": -34.6,
+    "longitude_deg": 20.3,
+    "altitude_m": 0
+  }
+}
