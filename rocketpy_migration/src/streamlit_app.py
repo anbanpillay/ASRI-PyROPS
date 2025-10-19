@@ -227,16 +227,35 @@ if 'flight' in st.session_state:
     st.header("📈 Flight Trajectory")
 
     # Create trajectory dataframe
-    # Convert to numpy arrays first, then to lists to ensure JSON serialization works
+    # RocketPy stores data as Function objects with source arrays
     import numpy as np
 
-    # Extract data - handle both arrays and Function objects
-    time_data = np.array(flight.time).flatten() if hasattr(flight.time, '__iter__') else np.array([flight.time])
-    alt_data = np.array(flight.z).flatten() if hasattr(flight.z, '__iter__') else np.array([flight.z])
-    vel_data = np.array(flight.speed).flatten() if hasattr(flight.speed, '__iter__') else np.array([flight.speed])
-    accel_data = np.array(flight.acceleration).flatten() if hasattr(flight.acceleration, '__iter__') else np.array([flight.acceleration])
-    x_data = np.array(flight.x).flatten() if hasattr(flight.x, '__iter__') else np.array([flight.x])
-    y_data = np.array(flight.y).flatten() if hasattr(flight.y, '__iter__') else np.array([flight.y])
+    # Extract the actual data arrays from RocketPy Function objects
+    # These are stored in the .source attribute as (x, y) pairs
+    try:
+        # Try to get data from Function objects (RocketPy's internal structure)
+        if hasattr(flight.z, 'source'):
+            # Data is stored as [[time, altitude], [time, altitude], ...]
+            time_data = np.array([point[0] for point in flight.z.source])
+            alt_data = np.array([point[1] for point in flight.z.source])
+
+            # Get other variables similarly
+            vel_data = np.array([point[1] for point in flight.speed.source])
+            accel_data = np.array([point[1] for point in flight.acceleration.source])
+            x_data = np.array([point[1] for point in flight.x.source])
+            y_data = np.array([point[1] for point in flight.y.source])
+        else:
+            # Fallback: direct array access
+            time_data = np.array(flight.time).flatten()
+            alt_data = np.array(flight.z).flatten()
+            vel_data = np.array(flight.speed).flatten()
+            accel_data = np.array(flight.acceleration).flatten()
+            x_data = np.array(flight.x).flatten()
+            y_data = np.array(flight.y).flatten()
+    except Exception as e:
+        st.error(f"Error extracting trajectory data: {e}")
+        st.info("Flight object structure: " + str(type(flight.z)))
+        raise
 
     trajectory_df = pd.DataFrame({
         'Time (s)': time_data.tolist(),
