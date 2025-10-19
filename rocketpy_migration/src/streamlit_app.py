@@ -168,7 +168,7 @@ if st.sidebar.button("🚀 Run Simulation", type="primary"):
             rail_length=rail_length,
             inclination=inclination,
             heading=heading,
-            max_time=600,
+            max_time=3600,  # 1 hour - plenty of time for descent
             max_time_step=0.5,
             terminate_on_apogee=False,
             verbose=False
@@ -405,7 +405,9 @@ if 'flight' in st.session_state:
 
         # Calculate zoom level based on distance
         distance_m = np.sqrt(flight.x_impact**2 + flight.y_impact**2)
-        if distance_m < 1000:
+        if distance_m < 100:
+            zoom_level = 16  # Very close - zoom way in
+        elif distance_m < 1000:
             zoom_level = 14
         elif distance_m < 5000:
             zoom_level = 12
@@ -471,6 +473,9 @@ if 'flight' in st.session_state:
         with col3:
             st.metric("Ground Distance", f"{distance_m:.0f} m")
 
+        if distance_m < 100:
+            st.warning(f"⚠️ **Landing very close to launch** ({distance_m:.1f}m). The markers may overlap on the map. This could mean the simulation hit the time limit before completing descent. Try refreshing and running again with a longer max_time.")
+
         st.info(f"💡 **Tip**: The map shows satellite imagery. Green marker = launch, Red marker = landing, Blue line = trajectory projection, Orange circle = apogee location (directly above launch).")
 
     with tab5:
@@ -516,6 +521,13 @@ if 'flight' in st.session_state:
         else:
             regime = "Supersonic"
         st.write(f"**Flight Regime**: {regime}")
+
+        # Debug info
+        st.write(f"**Flight Duration**: {flight.t_final:.1f} s")
+
+        # Check if flight looks suspicious
+        if abs(flight.x_impact) < 1 and abs(flight.y_impact) < 1:
+            st.warning("⚠️ Landing position is very close to launch (0,0). The parachute may not have deployed properly or the simulation may have terminated early. Check the trajectory data.")
 
 else:
     # Initial state - show instructions

@@ -168,7 +168,7 @@ try:
         rail_length=7.0,
         inclination=80,  # degrees from horizontal
         heading=260,  # -100° in PyROPS convention
-        max_time=600,
+        max_time=3600,  # 1 hour - enough time for full descent
         max_time_step=0.5,
         terminate_on_apogee=False,
         verbose=False  # Disable verbose to avoid stuck output
